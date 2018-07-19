@@ -31,7 +31,7 @@ and throttle amount with respect to time predict new values.
 
 ###### error of psi
 
-``` epsi[t] = psi[t] - psides[t-1] + v[t-1] * delta[t-1] / Lf * dt ```
+``` epsi[t] = epsi1 - ((psi0 - psides0) - v0 * delta0 / Lf * dt) ```
 
 Cte means how far is car's position to ideal position.
 
@@ -44,6 +44,12 @@ Both values should be as small as possible, car's state is changed by steering a
 
 I choosed N = 10 and dt = 0.1 as a first try, this values were used in Q&A as well. I tried to improve 
 this values a bit but any significant change of the value lead to unsafe driving.
+
+* __dt value__ : with small dt is prediction horizon divided into smaller parts and car's state vector is updated more often and MPC reacts to changes in trajectory well. If dt is too big MPC can't react to changes of the trajectory fast enough.     
+* __N value__ : N value defines how many points will be predicted. If N is high in combination with low dt it creates excessive computational load.  
+* __N * dt__ : time horizon defines how many seconds is predicted. If MPC tries to predict too many seconds in advance we are not able to adjust cars's speed in case of unpredicted change and because predicted path is polynomial we can't expect same path as real trajectory could have.
+Better approach is to predict shorter path and be able to redraw polynomial according real trajectory.       
+
 
 > ####Polynomial Fitting and MPC Preprocessing
 
