@@ -3,7 +3,7 @@ Self-Driving Car Engineer Nanodegree Program
 
 ## Rubric answers
 
-> ####Describe model
+> #### Describe model
 * Kinematic model consists of 6 variables
 
 ###### x position
@@ -40,18 +40,18 @@ Epsi means how much is car's angle different to expected angle.
 Both values should be as small as possible, car's state is changed by steering angle and velocity update.
 
 
-> ####Timestep Length and Elapsed Duration (N & dt)
+> #### Timestep Length and Elapsed Duration (N & dt)
 
 I choosed N = 10 and dt = 0.1 as a first try, this values were used in Q&A as well. I tried to improve 
 this values a bit but any significant change of the value lead to unsafe driving.
 
-> ####Polynomial Fitting and MPC Preprocessing
+> #### Polynomial Fitting and MPC Preprocessing
 
 Coefficients of 3rd degree polynomial are counted by given function `polyfit`.
 
 Coordinates of waypoints needs to be transformed to have keep car's position and angle as origin equal to 0.
 
-> ####Model Predictive Control with Latency
+> #### Model Predictive Control with Latency
 
 If latency is present simple kinematic equations doesn't work well simply because counted values are 
 "old" and real state of the car is equal to values for time frame `dt + delay`. That's the idea which needs to be used for update of equations. 
