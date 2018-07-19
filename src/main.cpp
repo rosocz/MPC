@@ -87,9 +87,12 @@ int main() {
           // j[1] is the data JSON object
           vector<double> ptsx = j[1]["ptsx"];
           vector<double> ptsy = j[1]["ptsy"];
+          //coordinates of car's position
           double px = j[1]["x"];
           double py = j[1]["y"];
+          //direction of car
           double psi = j[1]["psi"];
+          //car's speed
           double v = j[1]["speed"];
 
           /*
@@ -101,18 +104,66 @@ int main() {
           double steer_value;
           double throttle_value;
 
+          for (unsigned int i = 0; i < ptsx.size(); i++) {
+            //distance of car's position to waypoint
+            double shift_x = ptsx[i] - px;
+            double shift_y = ptsy[i] - py;
+            //transform to car's direction
+            ptsx[i] = shift_x * cos(-psi) - shift_y * sin(-psi);
+            ptsy[i] = shift_x * sin(-psi) + shift_y * cos(-psi);
+          }
+
+          //type conversion
+          double* ptrx = &ptsx[0];
+          Eigen::Map<Eigen::VectorXd> ptsx_transform(ptrx, 6);
+
+          double* ptry = &ptsy[0];
+          Eigen::Map<Eigen::VectorXd> ptsy_transform(ptry, 6);
+
+          auto coeffs = polyfit(ptsx_transform, ptsy_transform, 3);
+
+          double cte = polyeval(coeffs, 0);
+          double epsi = -atan(coeffs[1]);
+
+          //car's steering
+          steer_value = j[1]["steering_angle"];
+          //throttle means acceleration
+          throttle_value = j[1]["throttle"];
+
+          //initialize state
+          double delay = 0.1;
+          double x_delay = v * delay;
+          double y_delay = 0;
+          double psi_delay = - (v * steer_value * delay / 2.67);
+          double v_delay = v + throttle_value * delay;
+          double cte_delay = cte + ( v * sin(epsi) * delay );
+          double epsi_delay = epsi - ( v * atan(coeffs[1]) * delay / 2.67 );
+          //car's state vector
+          Eigen::VectorXd state(6);
+          state << x_delay, y_delay, psi_delay, v_delay, cte_delay, epsi_delay;
+
+          //vector with variables for cost function and model
+          auto vars = mpc.Solve(state, coeffs);
+
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = throttle_value;
+          msgJson["steering_angle"] = vars[0]/deg2rad(25);
+          msgJson["throttle"] = vars[1];
 
-          //Display the MPC predicted trajectory 
+          //Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Green line
+          // the points in the simulator are connected by throttle Green line
+          for (unsigned int i = 2; i < vars.size(); i++ ) {
+            if ( i % 2 == 0 ) {
+              mpc_x_vals.push_back( vars[i] );
+            } else {
+              mpc_y_vals.push_back( vars[i] );
+            }
+          }
 
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
@@ -122,7 +173,16 @@ int main() {
           vector<double> next_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Yellow line
+          // the points in the simulator are connected by throttle Yellow line
+
+          double poly_inc = 2.5;
+          int num_points = 25;
+
+          for (int i = 0; i < num_points; i++)
+          {
+            next_x_vals.push_back(i*poly_inc);
+            next_y_vals.push_back(polyeval(coeffs,i*poly_inc));
+          }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
